@@ -1,0 +1,59 @@
+from py64drive import Py64drive
+import argparse
+import sys
+import textwrap
+
+def main():
+
+    #TODO: improve argument parsing, add more help text
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog = textwrap.dedent("""
+        bank types:
+          0     Invalid
+          1     Cartridge ROM
+          2     SRAM 256K
+          3     SRAM 768K
+          4     FlashRAM
+          5     FlashRAM (PkmnSt2)
+          6     EEPROM
+
+        save types:
+          0     None
+          1     EEPROM 4K
+          2     EEPROM 16K
+          3     SRAM 256K
+          4     FlashRAM
+          5     SRAM 768K
+          6     FlashRAM (PkmnSt2)
+        """)
+    )
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("-l","--load", nargs=1, metavar="file", help="Load data to cart")
+    group.add_argument("-d","--dump", nargs=1, metavar="file", help="Dump data from cart")
+    group.add_argument("-s","--setsave", nargs=1, type=int, metavar="save_type", help="Set save type")
+    parser.add_argument("bank", type=int, nargs='?', default=1, help="64drive bank")
+    parser.add_argument("addr", type=int, nargs='?', default=0, help="offset address")
+    parser.add_argument("len", type=int, nargs='?', default=0, help="number of bytes to read")
+
+    args = parser.parse_args(sys.argv[1:])
+
+    device = Py64drive()
+
+    if not device.read_version():
+        print("Incorrect 64drive version reported.")
+        sys.exit(1)
+
+    if args.load:
+        with open(args.load[0],"rb") as f:
+            data = f.read()
+            device.load_image(data, args.bank, args.addr)
+    elif args.dump:
+        with open(args.dump[0],"xb") as f:
+            data = device.dump_image(args.len, args.bank, args.addr)
+            f.write(data)
+    elif args.setsave:
+        device.set_save(args.setsave[0])
+
+if __name__ == "__main__":
+    main()
